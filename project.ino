@@ -1,101 +1,116 @@
-void setup() {
-  // put your setup code here, to run once:
-
-}
+#include <Keypad.h>
 #include <LiquidCrystal.h>
 
-
-#define PIN_BUTTON 2
-
-#define CAR_POSITION 1
-
-#define CAR_LEFT 1
-#define CAR_RIGHT 2
-
-#define R_ROAD_WIDTH 16
-#define R_ROAD_EMPTY 0
-
-#define CAR_LEFT
-#define ROAD_EMPTY ' '      
-#define ROAD_SOLID 5
-#define ROAD_SOLID_RIGHT 6
-#define ROAD_SOLID_LEFT 7
+LiquidCrystal lcd(5, 4, 3, 2, A4, A5);
 
 
-// initialize the library with the numbers of the interface pins
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
-static char upperSide[ROAD_WIDTH +1];
-static char lowerSide[ROAD_WIDTH +1];
-static bool buttonPushed = false;
+const byte ROWS = 4; //patru randuri
+const byte COLS = 4; //patru coloane
+char keys[ROWS][COLS] = {		// matricea de caractere pentru caracterele keypadului
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {A0, A1, 11, 10}; //conectam randurile keypadului la pini
+byte colPins[COLS] = {9, 8, 7, 6}; //conectam coloanele keypadului la pini
 
-void moveRoad(char* road, byte newRoad){
-  for(int i=0; i<ROAD_WIDTH; ++i){
-    char x = road[i];
-    char next = (i == ROAD_WIDTH-1) ? newRoad : road[i+1];
-    switch(x){
-      case ROAD_EMPTY:
-          road[i] = (next == ROAD_SOLID) ? ROAD_SOLID_RIGHT : ROAD_EMPTY;
-          break;
-        case ROAD_SOLID:
-          road[i] = (next == ROAD_EMPTY) ? ROAD_SOLID_LEFT : ROAD_SOLID;
-          break;
-        case ROAD_SOLID_RIGHT:
-          solid[i] = ROAD_SOLID;
-          break;
-        case ROAD_SOLID_LEFT:
-          solid[i] = ROAD_EMPTY;
-          break;
-      }
-  }
+// declararea keypadului 
+Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+
+int maxDigits = 5;		// numarul de cifre retinute pentru castigarea jocului
+int score = 0;			// scorul care se va afisa jucatorului
+int cifre[8]={};		// vectorul folosit pentru retinerea cifrelor
+int wrong = 0;			
+int i=0,j=0,k=0;
+
+void setup(){
+  Serial.begin(9600);
+  lcd.begin(16, 2);   // afiserea mesajelor de inceput pe lcd
+  lcd.print("Memory Game");
+  lcd.setCursor(0, 1);
+  lcd.print("Press * to start");
 }
-
-bool theCar(byte position, char*upperSide, char*lowerSide, unsigned int score){
-  bool collide = false;
-  char upp = upperSide[CAR_POSITION];
-  char low = lowerSide[CAR_POSITION];
   
-}
-
-void pushButton(){
-  buttonP = true;
-}
-
-void setup() {
-  byte digits = (score > 999) ? 4 : (score > 99) ? 3 : (score > 9) ? 2 : 1;
-  // set up the LCD's number of columns and rows:
-  lcd.begin(16, 2);
-  // 
-  lcd.setCursor(0,0);
-  lcd.print(upperSide);
-  upperSide[16-digits] = temp;  
+void loop(){
   
-  lcd.setCursor(0,1);
-  lcd.print(lowerSide);
-  
-  lcd.setCursor(16 - digits,0);
-  lcd.print(score);
-}
-void loop() {
-  // put your main code here, to run repeatedly:
-  static bool playing = false;
-  static bool blink = false;
-  static unsigned int distance = 0;
-  
-  if(!playing){
-    drawCar((blink)? CAR_POSITION_OFF : carPos, upperSide, lowerSide, distance >> 3);
-    if(blink){
-      lcd.setCursor(0,0);
-        lcd.print("Start Game");
+  char key = keypad.getKey();   
+  if (key == '*'){   // start game daca se apasa tasta corespunzatoare caracterului *
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Digit:");   // se afiseaza cifra si scorul
+    lcd.setCursor(0, 1);
+    lcd.print("Score:");
+    lcd.print(score);
+    i=0;
+    while(i<maxDigits){
+        cifre[i]=random(0,10); // se adauga cifre random de la 0 la 10 
+        lcd.setCursor(6, 0);    // se seteaza cursorul la lcd pentru a putea afisa fiecare cifra noua
+        lcd.print(cifre[i]);   // afisarea cifrei
+        delay(500);
+        j=0;
+        while(j<=i){  // cu j se vor parcurge cifrele din vectorul de cifre
+            char keyNum = keypad.getKey();
+            while(!keyNum){   // se asteapta citirea caracterului din keypad
+                keyNum = keypad.getKey(); 
+            }
+            if(toCifra(keyNum) == cifre[j]){ 
+              // daca caracterul citit din keypad corespunde cu elementul curent din vectorul de cifre
+              // atunci se trece la urmatorul element din vectorul de cifre
+                //Serial.println(numere[j]);
+                //Serial.println(keyNum);
+                //Serial.println("**");
+                j++;
+            }
+            else{   //daca se greseste, atunci jocul e pierdut
+                wrong = 1;
+                break;
+            }
+        }
+        if (wrong == 0){  // daca nu s-a gresit cifra se continua cu un numar nou
+            score++;
+            lcd.setCursor(6, 1);
+            lcd.print(score);
+            i++;
+        }
+        else if (wrong == 1){ // daca s-a gresit cifra jocul este pierdut 
+            lcd.clear();
+            lcd.print("Wrong digit"); // se printeaza mesaj in cazul in care s-a gresit cifra
+            lcd.setCursor(0, 1);
+            lcd.print("Game over");
+            score = 0;    // se reseteaza scorul si var wrong
+            wrong = 0;
+            delay(1000);
+            lcd.clear();
+            lcd.print("Press * to");  // se printeaza mesaj in cazul in care se doreste reinceperea unui alt joc 
+            lcd.setCursor(0, 1);
+            lcd.print("restart");
+            break;
+        }
     }
-    delay(300);
-    blink = !blink;
-    if (buttonPushed){
-      initializeGraphics();
-        carPos = CAR_POSITION;
-        playing = true;
-        buttonPushed = false;
-        distance = 0;
+    
+    if(i==maxDigits){
+        lcd.clear();
+        lcd.print("You WIN");   // se printeaza mesaj in caz de castig joc
+        lcd.setCursor(0, 1);
+        lcd.print("* to restart");
+        score = 0;    // se reseteaza scorul si var wrong in caz de castig, pentru urmatorul joc
+        wrong = 0;
+        delay(500);
     }
-    return;
   }
+  
 }
+int toCifra(char c){    // functie pentru identificarea caracterului si returnarea cifrei corespunzatoare
+  if(c=='1')return 1;
+  else if(c=='2')return 2;
+  else if(c=='3')return 3;
+  else if(c=='4')return 4;
+  else if(c=='5')return 5;
+  else if(c=='6')return 6;
+  else if(c=='7')return 7;
+  else if(c=='8')return 8;
+  else if(c=='9')return 9;
+  else if(c=='0')return 0;
+  }
+  
