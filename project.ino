@@ -49,7 +49,7 @@ void loop(){
 	level = 1;
     wrong2 = 0;
 	
-    while(level<5){		
+    while(level<8){		
 		i=0;
     	while(i<minDigits+level){		// la fiecare nivel se incrementeaza numarul de cifre necesare
         	cifre[i]=random(0,10); // se adauga cifre random de la 0 la 10 
@@ -123,7 +123,7 @@ void loop(){
   	
     }
    
-    if (level == 5){		// daca se ajunge la nivelul 5, jocul este castigat
+    if (level == 8){		// daca se ajunge la nivelul 5, jocul este castigat
     	lcd.clear();
         lcd.print("You WIN"); 
       	lcd.setCursor(0, 1);
